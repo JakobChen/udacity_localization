@@ -92,10 +92,9 @@ Eigen::Matrix4d NDT(PointCloudT::Ptr mapCloud, PointCloudT::Ptr source, Pose sta
 {  	
 	
 	pcl::NormalDistributionsTransform<pcl::PointXYZ, pcl::PointXYZ> ndt;
-			// TODO: Transform scan so it aligns with ego's actual pose and render that scan
-	ndt.setTransformationEpsilon(1e-8);
+	ndt.setTransformationEpsilon(1e-4); //1e-8
 	//ndt.setStepSize(2);
-	ndt.setResolution(1);
+	ndt.setResolution(0.6);
 	ndt.setInputTarget(mapCloud);
 	pcl::console::TicToc time;
     time.tic ();
@@ -224,20 +223,25 @@ int main(){
   		viewer->spinOnce ();
 		
 		if(!new_scan){
-			
+			int n_scans = 0;
+			if(n_scans == 0) {
+			        // "The ground truth is only used at the beginning of localization, and is not utilized again. From there, the lidar data should be used to localize."
+				pose.position = truePose.position;
+				pose.rotation = truePose.rotation;
+			}
 			new_scan = true;
 			// TODO: (Filter scan using voxel filter)
 			pcl::VoxelGrid <PointT> vg;
-			double filterRes = 0.5; //
+			double filterRes = 1; //0.5
 			vg.setInputCloud(scanCloud);
 
 			vg.setLeafSize(filterRes,filterRes,filterRes);
-			typename pcl::PointCloud<PointT>::Ptr couldFiltered (new pcl::PointCloud<PointT>);
+			//typename pcl::PointCloud<PointT>::Ptr couldFiltered (new pcl::PointCloud<PointT>);
 			vg.filter(*cloudFiltered);
 			// TODO: Find pose transform by using ICP or NDT matching
 			//pose = ....
 			
-			Eigen::Matrix4d transform = NDT(mapCloud, cloudFiltered, pose,5);
+			Eigen::Matrix4d transform = NDT(mapCloud, cloudFiltered, pose,130);
 			pose = getPose(transform);
 			PointCloudT::Ptr transformed_scan(new PointCloudT);
 			pcl::transformPointCloud(*cloudFiltered, *transformed_scan, transform);
